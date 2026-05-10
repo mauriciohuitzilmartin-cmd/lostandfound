@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lost & Found - La Zebra</title>
+</head>
+
+<body style="font-family:sans-serif; background:#f7b24a; padding:20px; margin:0;">
+
+<!-- 👤 USUARIO LOGUEADO -->
+<div id="userDisplay" style="position: fixed; top: 15px; left: 15px; color: white; font-weight: bold; text-shadow: 0 1px 3px rgba(0,0,0,0.5); z-index: 1000; display: none; font-size: 14px;">
+    👤 <span id="currentUserName"></span>
+</div>
+
+<!-- 🔐 LOGIN -->
+<div id="login" style="position:fixed; top:0; left:0; width:100%; height:100%; background: linear-gradient(to bottom, #ffffff, #000000); display:flex; justify-content:center; align-items:center; flex-direction:column; z-index:9999;">
+  <img src="https://res.cloudinary.com/dx6hgkipa/image/upload/v1778335202/LZ-Hcolor_vthqaq.png" style="width:320px; height:auto; margin-bottom:15px; filter:drop-shadow(0 5px 10px rgba(0,0,0,0.2));">
+  <h2 style="margin:0; color:#222; font-size:32px;">Lost & Found</h2>
+  <div style="background:white; padding:25px; border-radius:12px; width:280px; box-shadow:0 10px 25px rgba(0,0,0,0.15); margin-top: 20px;">
+    <input id="username" placeholder="Usuario" style="width:100%; padding:12px; margin-bottom:12px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box;">
+    <input id="pin" type="password" placeholder="PIN" style="width:100%; padding:12px; margin-bottom:12px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box;">
+    <button id="btnLogin" onclick="login()" style="width:100%; padding:12px; background:#f59e0b; border:none; color:white; border-radius:6px; cursor:pointer; font-weight:bold;">Entrar (Enter)</button>
+    <p id="error" style="color:red; text-align:center; margin-top:10px; font-size:14px;"></p>
+  </div>
+</div>
+
+<!-- 👥 MODAL GESTIÓN DE USUARIOS -->
+<div id="modalUsers" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10006; justify-content:center; align-items:center;">
+    <div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:450px; max-height:80vh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0;">Control de Usuarios</h3>
+            <button onclick="closeModal('modalUsers')" style="background:none; border:none; font-size:20px; cursor:pointer;">✕</button>
+        </div>
+        <div id="listaUsuariosControl"></div>
+    </div>
+</div>
+
+<!-- 📦 MODAL PARA AGREGAR/EDITAR OBJETO -->
+<div id="modalCreate" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; justify-content:center; align-items:center; backdrop-filter: blur(3px);">
+    <div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:400px; box-shadow:0 20px 40px rgba(0,0,0,0.4); max-height: 90vh; overflow-y: auto;">
+        <h3 id="modalCreateTitle" style="margin-top:0; color:#222;">Registrar Hallazgo</h3>
+        <input type="hidden" id="editItemId">
+        
+        <label style="font-size:12px; color:#666; font-weight:bold;">Objeto</label>
+        <input id="objetoNom" placeholder="Ej. iPhone 13" style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+        
+        <label style="font-size:12px; color:#666; font-weight:bold;">Descripción</label>
+        <textarea id="descripcion" placeholder="Detalles..." style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; height:60px; font-family: sans-serif;"></textarea>
+        
+        <label style="font-size:12px; color:#666; font-weight:bold;">Clasificación</label>
+        <select id="clasificacion" style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+            <option value="estandar">Estándar (30 días)</option>
+            <option value="valioso">Valioso (180 días)</option>
+        </select>
+        
+        <label style="font-size:12px; color:#666; font-weight:bold;">Encontrado por:</label>
+        <input id="colaborador" placeholder="Nombre" style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+        
+        <label style="font-size:12px; color:#666; font-weight:bold;">Fecha en la que se encontró:</label>
+        <input type="date" id="fechaHallazgo" style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+        
+        <label style="font-size:12px; color:#666; font-weight:bold;">Ubicación:</label>
+        <input id="ubicacion" placeholder="Lugar" style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+        
+        <label style="font-size:12px; color:#666; font-weight:bold;">Foto (Abrirá cámara en móvil)</label>
+        <input type="file" id="foto" accept="image/*" capture="environment" style="margin-bottom:20px; width:100%; font-size: 13px; padding: 10px; border: 1px dashed #ccc; border-radius: 8px;">
+        
+        <div style="display:flex; gap:10px;">
+            <button onclick="closeModal('modalCreate')" style="flex:1; padding:12px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Cancelar (Esc)</button>
+            <button id="btnGuardar" onclick="guardarObjeto()" style="flex:2; padding:12px; background:#f59e0b; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Guardar (Enter)</button>
+        </div>
+    </div>
+</div>
+
+<!-- 📊 MODAL EXPORTAR -->
+<div id="modalExport" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10005; justify-content:center; align-items:center;">
+    <div style="background:white; padding:25px; border-radius:15px; width:280px; text-align:center;">
+        <h3 style="margin-top:0;">Configurar Reporte</h3>
+        <p style="font-size:12px; color:#666;">Selecciona qué estados incluir:</p>
+        <div style="text-align:left; margin-bottom:20px; display:inline-block;">
+            <label style="display:block; margin:5px 0;"><input type="checkbox" id="chkDisponible" checked> Disponibles</label>
+            <label style="display:block; margin:5px 0;"><input type="checkbox" id="chkDonado" checked> Donados</label>
+            <label style="display:block; margin:5px 0;"><input type="checkbox" id="chkDevuelto" checked> Devueltos</label>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button onclick="closeModal('modalExport')" style="flex:1; padding:10px; border-radius:8px; border:none; background:#eee; cursor:pointer;">Cancelar</button>
+            <button onclick="ejecutarExportacionSelectiva()" style="flex:1; padding:10px; border-radius:8px; border:none; background:#f59e0b; color:white; font-weight:bold; cursor:pointer;">Descargar</button>
+        </div>
+    </div>
+</div>
+
+<!-- 👁️ MODAL DE DETALLES -->
+<div id="modalDetails" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10001; justify-content:center; align-items:center; backdrop-filter: blur(5px);">
+    <div style="background:white; padding:20px; border-radius:15px; width:90%; max-width:500px; text-align:center;">
+        <h3 id="detailTitle" style="margin-top:0;"></h3>
+        <img id="detailImg" src="" style="width:100%; max-height:350px; object-fit:contain; border-radius:10px; margin-bottom:15px; background:#f4f4f4;">
+        <div id="detailInfo" style="color:#555; font-size:14px; margin-bottom:20px; text-align: left; padding: 0 10px;"></div>
+        <div style="display:flex; gap:10px; flex-wrap: wrap; justify-content: center;">
+            <button onclick="closeModal('modalDetails')" style="flex:1; min-width:100px; padding:12px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Cerrar (Esc)</button>
+            <button id="btnEditar" style="flex:1; min-width:100px; padding:12px; background:#f59e0b; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; display:none;">✏️ Editar</button>
+            <button id="btnDevolver" style="flex:1; min-width:100px; padding:12px; background:#10b981; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; display:none;">🤝 Devolver</button>
+            <button id="btnDonar" style="flex:1; min-width:100px; padding:12px; background:#3b82f6; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; display:none;">🎁 Donar</button>
+            <button id="btnEliminar" style="flex:1; min-width:100px; padding:12px; background:#ef4444; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; display:none;">🗑️ Eliminar</button>
+        </div>
+    </div>
+</div>
+
+<!-- CONTENIDO PRINCIPAL -->
+<div style="max-width:1000px; margin:auto;">
+    <h1 style="color:white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">Lost & Found - La Zebra</h1>
+    <div id="toolbar" style="background:white; padding:10px; margin-bottom:10px; border-radius:10px; display:flex; gap:8px; flex-wrap:wrap; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
+    
+    <div style="background:white; padding:10px; margin-bottom:10px; border-radius:10px; display: flex; gap: 10px; align-items: center;">
+      <button onclick="handleAction('all')" style="padding:10px 15px; border-radius:6px; border:1px solid #ddd; background:#eee; cursor:pointer; font-weight:bold;">✨ Todos</button>
+      <input id="searchInput" placeholder="Buscar objeto o colaborador..." style="flex: 1; padding:12px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box;" oninput="filtrarObjetos()">
+      <button onclick="cargarDatos()" style="padding: 10px; border: none; background: #eee; border-radius: 6px; cursor: pointer;">🔄</button>
+    </div>
+    
+    <div id="resultados"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAE7w8c5ox8uRagTwVNBXAYytHV1HSM8g8",
+  authDomain: "lostfound-lazebra.firebaseapp.com",
+  projectId: "lostfound-lazebra",
+  storageBucket: "lostfound-lazebra.firebasestorage.app",
+  messagingSenderId: "785740850445",
+  appId: "1:785740850445:web:aacea13cc28d5e60f1fc44"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Variables Globales
+window.currentUser = null;
+window.userRole = null;
+window.allItems = [];
+window.currentFilter = 'all';
+window.hasExportedArchived = false;
+
+const PERMISSIONS = {
+  staff: { create: true, return: true, archived: true },
+  gerencia: { create: true, donate: true, return: true, expired: true, today: true, tomorrow: true, archived: true },
+  superadmin: { all: true, delete: true, export: true, users: true, archived: true, clean: true }
+};
+
+const ACTIONS = [
+  { id: "create", label: "➕ Agregar" },
+  { id: "expired", label: "🔴 Vencidos" },
+  { id: "today", label: "Hoy vencen" },
+  { id: "tomorrow", label: "Mañana vencen" },
+  { id: "archived", label: "📂 Archivados" },
+  { id: "export", label: "💾 Exportar CSV" },
+  { id: "users", label: "👥 Usuarios" },
+  { id: "clean", label: "🧹 Limpiar Base" }
+];
+
+/* ================= EVENTOS DE TECLADO ================= */
+window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { 
+        closeModal("modalCreate"); closeModal("modalDetails"); 
+        closeModal("modalExport"); closeModal("modalUsers");
+    }
+    if (e.key === "Enter") {
+        if (document.getElementById("login").style.display !== "none") login();
+        else if (document.getElementById("modalCreate").style.display === "flex") {
+            if (document.activeElement.id !== "descripcion") guardarObjeto();
+        }
+    }
+});
+
+/* ================= LOGIN ================= */
+window.login = async function () {
+  const username = document.getElementById("username").value.trim();
+  const pinInput = document.getElementById("pin").value.trim();
+  const errorEl = document.getElementById("error");
+  if(!username || !pinInput) return;
+
+  try {
+    const q = query(collection(db, "users"), where("username", "==", username));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      errorEl.innerText = "Usuario no encontrado";
+      return;
+    }
+
+    const userDoc = snap.docs[0];
+    const userData = userDoc.data();
+    const userRef = doc(db, "users", userDoc.id);
+
+    if (userData.bloqueado) {
+      errorEl.innerText = "🚫 CUENTA BLOQUEADA.";
+      return;
+    }
+
+    if (userData.pin === pinInput) {
+      await updateDoc(userRef, { intentos: 0 }); 
+      window.userRole = (userData.rol || "staff").toLowerCase();
+      window.currentUser = { id: userDoc.id, ...userData };
+      document.getElementById("currentUserName").innerText = userData.username;
+      document.getElementById("userDisplay").style.display = "block";
+      document.getElementById("login").style.display = "none";
+      buildToolbar();
+      cargarDatos();
+    } else {
+      const nuevosIntentos = (userData.intentos || 0) + 1;
+      if (nuevosIntentos >= 3) {
+        await updateDoc(userRef, { intentos: nuevosIntentos, bloqueado: true });
+        errorEl.innerText = "🚫 Bloqueado tras 3 intentos.";
+      } else {
+        await updateDoc(userRef, { intentos: nuevosIntentos });
+        errorEl.innerText = `PIN incorrecto. Intento ${nuevosIntentos} de 3.`;
+      }
+    }
+  } catch (e) { errorEl.innerText = "Error de conexión."; }
+};
+
+/* ================= GESTIÓN USUARIOS ================= */
+window.abrirGestionUsuarios = async function() {
+    const cont = document.getElementById("listaUsuariosControl");
+    cont.innerHTML = "<p>Cargando...</p>";
+    document.getElementById("modalUsers").style.display = "flex";
+    const snap = await getDocs(collection(db, "users"));
+    cont.innerHTML = "";
+    snap.forEach(uDoc => {
+        const u = uDoc.data();
+        const estaBloqueado = u.bloqueado === true;
+        const card = document.createElement("div");
+        card.style = `padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:${estaBloqueado ? '#fff1f1' : 'transparent'}`;
+        card.innerHTML = `<div><b style="color:${estaBloqueado ? 'red' : '#333'}">${u.username}</b> <small>(${u.rol})</small></div>
+            <div style="display:flex; gap:5px;"><button onclick="resetearUsuario('${uDoc.id}', '${u.username}')" style="padding:6px 10px; background:#f59e0b; color:white; border:none; border-radius:4px; cursor:pointer;">PIN</button>
+            ${estaBloqueado ? `<button onclick="desbloquearUsuario('${uDoc.id}')" style="padding:6px 10px; background:#10b981; color:white; border:none; border-radius:4px; cursor:pointer;">Activar</button>` : ''}</div>`;
+        cont.appendChild(card);
+    });
+};
+
+window.desbloquearUsuario = async id => { await updateDoc(doc(db, "users", id), { bloqueado: false, intentos: 0 }); abrirGestionUsuarios(); };
+window.resetearUsuario = async (id, nombre) => { 
+    const n = prompt(`Nuevo PIN para ${nombre}:`); 
+    if(n){ await updateDoc(doc(db, "users", id), { pin: n, bloqueado: false, intentos: 0 }); alert("Listo"); abrirGestionUsuarios(); }
+};
+
+/* ================= TOOLBAR & ACCIONES ================= */
+function can(actionId) {
+  if (window.userRole === "superadmin") return true;
+  const perms = PERMISSIONS[window.userRole];
+  return perms ? perms[actionId] : false;
+}
+
+function buildToolbar() {
+  const bar = document.getElementById("toolbar");
+  bar.innerHTML = "";
+  ACTIONS.forEach(act => {
+    if (can(act.id)) {
+      const btn = document.createElement("button");
+      btn.innerText = act.label;
+      let style = "padding:8px 12px; border-radius:6px; border:1px solid #ddd; cursor:pointer; background:#f9f9f9; font-size:12px; font-weight:bold;";
+      
+      if (act.id === "clean") {
+          btn.disabled = !window.hasExportedArchived;
+          btn.style = style + (btn.disabled ? "opacity:0.4; cursor:not-allowed;" : "background:#fee2e2; color:#b91c1c; border-color:#fecaca;");
+      } else {
+          btn.style = style;
+      }
+      
+      btn.onclick = () => handleAction(act.id);
+      bar.appendChild(btn);
+    }
+  });
+}
+
+window.handleAction = function(id) {
+    if (id === "create") abrirModalRegistro();
+    else if (id === "export") document.getElementById("modalExport").style.display = "flex";
+    else if (id === "users") abrirGestionUsuarios();
+    else if (id === "clean") eliminarArchivosPermanente();
+    else { window.currentFilter = id; filtrarObjetos(); }
+};
+
+/* ================= REGISTRO / EDICIÓN ================= */
+window.abrirModalRegistro = function(item = null) {
+    const modal = document.getElementById("modalCreate");
+    const title = document.getElementById("modalCreateTitle");
+    const editId = document.getElementById("editItemId");
+    
+    ["objetoNom", "descripcion", "colaborador", "ubicacion", "foto", "editItemId"].forEach(id => document.getElementById(id).value = "");
+    document.getElementById("clasificacion").value = "estandar";
+    document.getElementById("fechaHallazgo").valueAsDate = new Date();
+
+    if (item) {
+        title.innerText = "Editar Registro";
+        editId.value = item.id;
+        document.getElementById("objetoNom").value = item.objeto;
+        document.getElementById("descripcion").value = item.descripcion || "";
+        document.getElementById("clasificacion").value = item.clasificacion;
+        document.getElementById("colaborador").value = item.encontradoPor;
+        document.getElementById("ubicacion").value = item.ubicacion || "";
+        if(item.fechaEncontrado) document.getElementById("fechaHallazgo").value = item.fechaEncontrado.split("T")[0];
+    } else {
+        title.innerText = "Registrar Hallazgo";
+    }
+
+    modal.style.display = "flex";
+    setTimeout(() => document.getElementById("objetoNom").focus(), 150);
+};
+
+window.guardarObjeto = async function() {
+    const editId = document.getElementById("editItemId").value;
+    const objeto = document.getElementById("objetoNom").value;
+    const colab = document.getElementById("colaborador").value;
+    const fechaH = document.getElementById("fechaHallazgo").value;
+    const fotoInput = document.getElementById("foto");
+    const btn = document.getElementById("btnGuardar");
+
+    if (!objeto || !colab || !fechaH) { alert("Faltan datos."); return; }
+
+    btn.innerText = "Subiendo..."; btn.disabled = true;
+
+    try {
+        let finalFotoUrl = "";
+        if (fotoInput.files && fotoInput.files[0]) {
+            const formData = new FormData();
+            formData.append("file", fotoInput.files[0]);
+            formData.append("upload_preset", "lostfound"); 
+            const resC = await fetch("https://api.cloudinary.com/v1_1/dx6hgkipa/image/upload", { method: "POST", body: formData });
+            const dataC = await resC.json();
+            finalFotoUrl = dataC.secure_url;
+        }
+
+        const baseDate = new Date(fechaH + "T12:00:00");
+        const vencimiento = new Date(baseDate);
+        const clas = document.getElementById("clasificacion").value;
+        vencimiento.setDate(baseDate.getDate() + (clas === "valioso" ? 180 : 30));
+
+        const data = {
+            objeto, 
+            descripcion: document.getElementById("descripcion").value, 
+            clasificacion: clas, 
+            encontradoPor: colab, 
+            fechaEncontrado: baseDate.toISOString(), 
+            ubicacion: document.getElementById("ubicacion").value, 
+            fechaVencimiento: vencimiento.toISOString(),
+            ultimaEdicion: new Date().toISOString(),
+            editadoPor: window.currentUser.username
+        };
+
+        if (finalFotoUrl) data.fotoUrl = finalFotoUrl;
+
+        if (editId) {
+            await updateDoc(doc(db, "items", editId), data);
+        } else {
+            data.estado = "disponible";
+            data.fechaRegistro = new Date().toISOString();
+            data.registradoPor = window.currentUser.username;
+            if (!finalFotoUrl) data.fotoUrl = "";
+            await addDoc(collection(db, "items"), data);
+        }
+
+        closeModal('modalCreate'); cargarDatos();
+    } catch (e) { alert("Error al guardar."); console.error(e); } 
+    finally { btn.innerText = "Guardar (Enter)"; btn.disabled = false; }
+};
+
+/* ================= EXPORTACIÓN CSV ================= */
+window.ejecutarExportacionSelectiva = function() {
+    const inclDonado = document.getElementById('chkDonado').checked;
+    const inclDevuelto = document.getElementById('chkDevuelto').checked;
+    const estados = [];
+    if(document.getElementById('chkDisponible').checked) estados.push('disponible');
+    if(inclDonado) estados.push('donado');
+    if(inclDevuelto) estados.push('devuelto');
+
+    const registros = window.allItems.filter(i => estados.includes(i.estado));
+    if (registros.length === 0) return alert("Sin datos.");
+
+    if (inclDonado || inclDevuelto) {
+        window.hasExportedArchived = true;
+        buildToolbar();
+    }
+
+    const h = ["Objeto", "Estado", "Clasificacion", "Encontrado_Por", "Ubicacion", "Fecha_Encontrado", "Link_Foto"];
+    const r = registros.map(i => [`"${i.objeto}"`,`"${i.estado.toUpperCase()}"`,`"${i.clasificacion}"`,`"${i.encontradoPor}"`,`"${i.ubicacion || ''}"`,`"${new Date(i.fechaEncontrado).toLocaleDateString()}"`,`"${i.fotoUrl || 'DELETED'}"`]);
+    const csv = "\uFEFF" + [h.join(","), ...r.map(e => e.join(","))].join("\n");
+    const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    link.download = `Reporte_LostFound_${new Date().toLocaleDateString()}.csv`; link.click(); 
+    closeModal('modalExport');
+};
+
+/* ================= FILTRADO & RENDER ================= */
+window.cargarDatos = async function() {
+  const q = query(collection(db, "items"), orderBy("fechaRegistro", "desc"));
+  const snap = await getDocs(q);
+  window.allItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  filtrarObjetos();
+};
+
+window.filtrarObjetos = function () {
+    const text = (document.getElementById("searchInput").value || "").toLowerCase();
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const mañana = new Date(hoy); mañana.setDate(hoy.getDate() + 1);
+
+    const filtrados = window.allItems.filter(i => {
+        const matchesText = 
+            (i.objeto || "").toLowerCase().includes(text) || 
+            (i.encontradoPor || "").toLowerCase().includes(text) ||
+            (i.descripcion || "").toLowerCase().includes(text);
+            
+        if (!matchesText) return false;
+
+        if (window.currentFilter === 'archived') return i.estado === 'donado' || i.estado === 'devuelto';
+        if (i.estado !== 'disponible') return false;
+        if (window.currentFilter === 'all') return true;
+
+        const fV = new Date(i.fechaVencimiento); fV.setHours(24,0,0,0); 
+        switch(window.currentFilter) {
+            case 'expired': return fV < hoy;
+            case 'today': return fV.getTime() === hoy.getTime();
+            case 'tomorrow': return fV.getTime() === mañana.getTime();
+            default: return true;
+        }
+    });
+    render(filtrados);
+};
+
+function render(items) {
+    const cont = document.getElementById("resultados");
+    cont.innerHTML = items.length === 0 ? '<p style="text-align:center; color:white; padding:20px;">Sin resultados.</p>' : "";
+    
+    if (window.currentFilter === 'archived') {
+        cont.innerHTML = `<h3 style="color:white; margin:10px 0 10px 5px; font-weight: normal;">📂 Historial de Salidas</h3>` + cont.innerHTML;
+    }
+
+    items.forEach(i => {
+        const fV = new Date(i.fechaVencimiento); fV.setHours(24,0,0,0);
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+        const esVencido = fV < hoy && i.estado === "disponible";
+        
+        // Configuración de visualización
+        const esValioso = i.clasificacion === 'valioso';
+        const accentColor = esValioso ? '#f59e0b' : '#3b82f6';
+        const diasRestantes = Math.max(0, Math.ceil((fV - hoy) / (1000 * 60 * 60 * 24)));
+        const totalDias = esValioso ? 180 : 30;
+        const porcentajeVida = Math.min(100, (diasRestantes / totalDias) * 100);
+
+        cont.innerHTML += `
+            <div onclick="verDetalles('${i.id}')" style="background:white; padding:0; margin:12px 0; border-radius:16px; display:flex; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.1); cursor:pointer; border: 1px solid #eee; opacity: ${i.estado === 'disponible' ? '1' : '0.8'}">
+                
+                <!-- Parte Izquierda: Miniatura -->
+                <div style="position:relative; width:100px; min-width:100px; background:#f0f0f0;">
+                    <img src="${i.fotoUrl || 'https://res.cloudinary.com/dx6hgkipa/image/upload/v1778335202/LZ-Hcolor_vthqaq.png'}" 
+                         style="width:100%; height:100%; object-fit:cover;">
+                    <div style="position:absolute; top:5px; left:5px; background:${accentColor}; color:white; font-size:8px; padding:2px 6px; border-radius:4px; font-weight:bold; text-transform:uppercase;">
+                        ${i.clasificacion}
+                    </div>
+                </div>
+
+                <!-- Parte Derecha: Información extendida -->
+                <div style="flex:1; padding:12px; display:flex; flex-direction:column; justify-content:space-between; position:relative;">
+                    
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <b style="font-size:16px; color:#222; margin-bottom:2px; display:block;">${i.objeto}</b>
+                            ${esVencido ? '⚠️' : ''}
+                        </div>
+                        
+                        <div style="font-size:12px; color:#666; margin-top:2px;">
+                            <span>📍 ${i.ubicacion || 'General'}</span> • <span>👤 ${i.encontradoPor}</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        ${i.estado === 'disponible' 
+                            ? `
+                                <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; font-weight:bold; color:${esVencido ? '#ef4444' : '#555'}">
+                                    <span>${esVencido ? 'PLAZO VENCIDO' : diasRestantes + ' días restantes'}</span>
+                                    <span style="opacity:0.6">${fV.toLocaleDateString()}</span>
+                                </div>
+                                <div style="background:#eee; height:4px; border-radius:10px; overflow:hidden;">
+                                    <div style="background:${esVencido ? '#ef4444' : (porcentajeVida < 25 ? '#f59e0b' : '#10b981')}; width:${porcentajeVida}%; height:100%; transition: width 0.3s;"></div>
+                                </div>
+                              `
+                            : `
+                                <div style="display:inline-block; background:#f3f4f6; color:#374151; font-size:10px; padding:2px 8px; border-radius:10px; font-weight:bold; border:1px solid #d1d5db;">
+                                    ${i.estado.toUpperCase()}
+                                </div>
+                              `
+                        }
+                    </div>
+                </div>
+                
+                <div style="display:flex; align-items:center; padding-right:8px; color:#ccc;">❯</div>
+            </div>
+        `;
+    });
+}
+
+/* ================= SALIDAS Y LIMPIEZA ================= */
+async function actualizarEstado(id, nuevoEstado) {
+    if (!confirm(`¿Confirmas salida como ${nuevoEstado.toUpperCase()}? La foto se borrará por privacidad.`)) return;
+    try {
+        await updateDoc(doc(db, "items", id), { estado: nuevoEstado, fotoUrl: "", fechaSalida: new Date().toISOString() });
+        closeModal('modalDetails'); cargarDatos();
+    } catch (e) { alert("Error."); }
+}
+
+async function eliminarArchivosPermanente() {
+    const archivados = window.allItems.filter(i => i.estado === 'donado' || i.estado === 'devuelto');
+    if (!confirm(`⚠️ ELIMINAR PERMANENTE: Se borrarán ${archivados.length} registros. ¿Continuar?`)) return;
+    try {
+        const promesas = archivados.map(i => deleteDoc(doc(db, "items", i.id)));
+        await Promise.all(promesas);
+        alert("Limpieza completada.");
+        window.hasExportedArchived = false; buildToolbar(); cargarDatos();
+    } catch (e) { alert("Error."); }
+}
+
+window.verDetalles = function(id) {
+    const item = window.allItems.find(i => i.id === id);
+    if (!item) return;
+    const fV = new Date(item.fechaVencimiento); fV.setHours(24,0,0,0);
+    const esVencido = fV < new Date();
+    
+    document.getElementById("detailTitle").innerText = item.objeto;
+    document.getElementById("detailImg").src = item.fotoUrl || 'https://res.cloudinary.com/dx6hgkipa/image/upload/v1778335202/LZ-Hcolor_vthqaq.png';
+    document.getElementById("detailInfo").innerHTML = `
+        <p><strong>Descripción:</strong> ${item.descripcion || '-'}</p>
+        <p><strong>Ubicación:</strong> ${item.ubicacion || '-'}</p>
+        <p><strong>Encontrado por:</strong> ${item.encontradoPor || '-'}</p>
+        <p><strong>Estado:</strong> ${item.estado.toUpperCase()}</p>
+        ${item.estado === 'disponible' ? `<p><strong>Vencimiento:</strong> ${fV.toLocaleDateString()}</p>` : `<p><strong>Salida:</strong> ${new Date(item.fechaSalida).toLocaleDateString()}</p>`}
+    `;
+    
+    document.getElementById("btnEditar").style.display = (can('create') && item.estado === 'disponible') ? "block" : "none";
+    document.getElementById("btnEditar").onclick = () => { closeModal('modalDetails'); abrirModalRegistro(item); };
+    
+    document.getElementById("btnDevolver").style.display = (can('return') && item.estado === 'disponible') ? "block" : "none";
+    document.getElementById("btnDevolver").onclick = () => actualizarEstado(id, 'devuelto');
+    
+    document.getElementById("btnDonar").style.display = (can('donate') && item.estado === 'disponible' && esVencido) ? "block" : "none";
+    document.getElementById("btnDonar").onclick = () => actualizarEstado(id, 'donado');
+    
+    document.getElementById("btnEliminar").style.display = can('delete') ? "block" : "none";
+    document.getElementById("btnEliminar").onclick = async () => { if(confirm("¿Borrar?")){ await deleteDoc(doc(db, "items", id)); closeModal('modalDetails'); cargarDatos(); } };
+    
+    document.getElementById("modalDetails").style.display = "flex";
+};
+
+window.closeModal = id => document.getElementById(id).style.display = "none";
+</script>
+</body>
+</html>
